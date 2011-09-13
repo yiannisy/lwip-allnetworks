@@ -55,7 +55,7 @@ ARFLAGS=rs
 LWIPDIR=$(CONTRIBDIR)/../lwip/src
 
 CFLAGS:=$(CFLAGS) \
-	-I. -I$(CONTRIBDIR)/apps/httpserver_raw -I$(CONTRIBDIR)/apps/httpserver -I$(CONTRIBDIR)/apps/shell \
+	-I. -I$(CONTRIBDIR)/apps/httpserver_raw -I$(CONTRIBDIR)/apps/httpserver -I$(CONTRIBDIR)/apps/shell -I$(CONTRIBDIR)/apps/httpallnetworks \
 	-I$(CONTRIBDIR)/apps/tcpecho -I$(CONTRIBDIR)/apps/udpecho \
 	-I$(LWIPDIR)/include -I$(LWIPARCH)/include -I$(LWIPDIR)/include/ipv4 \
 	-I$(LWIPDIR)/include/ipv6 -I$(LWIPDIR)
@@ -104,7 +104,8 @@ ARCHFILES=$(wildcard $(LWIPARCH)/*.c $(LWIPARCH)/netif/tapif.c $(LWIPARCH)/netif
 APPFILES=$(CONTRIBDIR)/apps/httpserver_raw/fs.c $(CONTRIBDIR)/apps/httpserver_raw/httpd.c \
 	$(CONTRIBDIR)/apps/udpecho/udpecho.c $(CONTRIBDIR)/apps/tcpecho/tcpecho.c \
 	$(CONTRIBDIR)/apps/shell/shell.c \
-	$(CONTRIBDIR)/apps/httpserver/httpserver-netconn.c
+	$(CONTRIBDIR)/apps/httpserver/httpserver-netconn.c \
+	$(CONTRIBDIR)/apps/httpallnetworks/httpserver.c
 
 # LWIPFILES: All the above.
 LWIPFILES=$(COREFILES) $(CORE4FILES) $(SNMPFILES) $(APIFILES) $(NETIFFILES) $(ARCHFILES)
