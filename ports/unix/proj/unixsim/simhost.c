@@ -69,6 +69,7 @@
 #include "arch/perf.h"
 
 #include "httpd.h"
+#include "httpserver-netconn.h"
 #include "udpecho.h"
 #include "tcpecho.h"
 #include "shell.h"
@@ -371,7 +372,8 @@ init_netifs(void)
 #if LWIP_TCP  
   tcpecho_init();
   shell_init();
-  httpd_init();
+  http_server_netconn_init();
+  //  httpd_init();
 #endif
 #if LWIP_UDP  
   udpecho_init();
