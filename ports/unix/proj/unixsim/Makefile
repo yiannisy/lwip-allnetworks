@@ -34,8 +34,8 @@ CC=gcc
 
 #To compile for linux: make ARCH=linux
 #To compile for cygwin: make ARCH=cygwin
-ARCH=unix
-CFLAGS=-g -Wall -D$(ARCH) -DIPv4 -DLWIP_DEBUG -pedantic -Werror \
+ARCH=linux
+CFLAGS=-g -Wall -D$(ARCH) -DIPv4 -DLWIP_DEBUG -pedantic \
 	-Wparentheses -Wsequence-point -Wswitch-default \
 	-Wextra -Wundef -Wshadow -Wpointer-arith -Wbad-function-cast \
 	-Wc++-compat -Wwrite-strings -Wold-style-definition \

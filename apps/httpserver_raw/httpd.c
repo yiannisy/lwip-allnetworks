@@ -92,7 +92,7 @@
 #if LWIP_TCP
 
 #ifndef HTTPD_DEBUG
-#define HTTPD_DEBUG         LWIP_DBG_OFF
+#define HTTPD_DEBUG         LWIP_DBG_ON
 #endif
 
 /** Set this to 1 and add the next line to lwippools.h to use a memp pool
@@ -145,7 +145,7 @@
 /** Set this to one to show error pages when parsing a request fails instead
     of simply closing the connection. */
 #ifndef LWIP_HTTPD_SUPPORT_EXTSTATUS
-#define LWIP_HTTPD_SUPPORT_EXTSTATUS        0
+#define LWIP_HTTPD_SUPPORT_EXTSTATUS        1
 #endif
 
 /** Set this to 0 to drop support for HTTP/0.9 clients (to save some bytes) */
@@ -163,7 +163,11 @@
 
 /** Set this to 1 to support HTTP request coming in in multiple packets/pbufs */
 #ifndef LWIP_HTTPD_SUPPORT_REQUESTLIST
-#define LWIP_HTTPD_SUPPORT_REQUESTLIST      0
+#define LWIP_HTTPD_SUPPORT_REQUESTLIST      1
+#endif
+
+#ifndef LWIP_HTTPD_SUPPORT_POST
+#define LWIP_HTTPD_SUPPORT_POST             1
 #endif
 
 #if LWIP_HTTPD_SUPPORT_REQUESTLIST
