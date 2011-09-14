@@ -80,6 +80,8 @@
 #include "lwip/raw.h"
 #endif
 
+#define LWIP_DEBUG 1
+
 /* (manual) host IP configuration */
 static ip_addr_t ipaddr, netmask, gw;
 
@@ -429,9 +431,9 @@ main(int argc, char **argv)
   char ip_str[16] = {0}, nm_str[16] = {0}, gw_str[16] = {0};
 
   /* startup defaults (may be overridden by one or more opts) */
-  IP4_ADDR(&gw, 192,168,0,1);
+  IP4_ADDR(&gw, 192,168,10,1);
   IP4_ADDR(&netmask, 255,255,255,0);
-  IP4_ADDR(&ipaddr, 192,168,0,2);
+  IP4_ADDR(&ipaddr, 192,168,10,2);
   
   ping_flag = 0;
   /* use debug flags defined by debug.h */
