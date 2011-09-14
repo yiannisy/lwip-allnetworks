@@ -55,9 +55,7 @@ http_server_netconn_serve(struct netconn *conn)
       netconn_write(conn, buffer, strlen(buffer), NETCONN_COPY);
       
       while ((ret = read(file_fd, buffer, BUFSIZE)) > 0) {
-	printf("want to send %d bytes\n",ret);
 	netconn_write_partly(conn, buffer, ret, NETCONN_COPY, &bytes_sent);
-	printf("sent %d bytes\n",bytes_sent);
       }
 
       printf("done with file (code : %d)\n", ret);
