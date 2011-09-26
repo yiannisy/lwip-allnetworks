@@ -154,7 +154,7 @@ a lot of data that needs to be copied, this should be set high. */
 #define TCP_MSS                 1024
 
 /* TCP sender buffer space (bytes). */
-#define TCP_SND_BUF             1024000
+#define TCP_SND_BUF             64000
 
 /* TCP sender buffer space (pbufs). This must be at least = 2 *
    TCP_SND_BUF/TCP_MSS for things to work. */
@@ -163,7 +163,7 @@ a lot of data that needs to be copied, this should be set high. */
 /* TCP writable space (bytes). This must be less than or equal
    to TCP_SND_BUF. It is the amount of space which must be
    available in the tcp snd_buf for select to return writable */
-#define TCP_SNDLOWAT		8096
+#define TCP_SNDLOWAT		8192
 
 /* TCP receive window. */
 #define TCP_WND                 65535

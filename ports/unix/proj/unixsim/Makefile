@@ -39,7 +39,7 @@ CFLAGS=-g -Wall -D$(ARCH) -DIPv4 -DLWIP_DEBUG -pedantic \
 	-Wparentheses -Wsequence-point -Wswitch-default \
 	-Wextra -Wundef -Wshadow -Wpointer-arith -Wbad-function-cast \
 	-Wc++-compat -Wwrite-strings -Wold-style-definition \
-	-Wmissing-prototypes -Wredundant-decls -Wnested-externs
+	-Wmissing-prototypes -Wredundant-decls -Wnested-externs -DTCP_CONGESTION_CONTROL
 # not used for now but interesting:
 # -Wpacked
 # -Wunreachable-code
