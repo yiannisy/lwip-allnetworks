@@ -6,8 +6,11 @@ import logging
 import time
 import threading
 import SocketServer
+import math
+import shlex, subprocess
 from optparse import OptionParser
 
+RATE_LIM_IFACE='eth0'
 DEFAULT_IFACE='eth0'
 DEFAULT_UDP_FEEDBACK_PORT=9091
 PORT=8081
@@ -22,6 +25,27 @@ weights = [1,1,1,1,0.8,0.6,0.4,0.2]
 s_intervals = []
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
+
+def setup_local_qdisc():
+    cmd = "tc qdisc add dev %s root handle 1: htb default 14" % RATE_LIM_IFACE
+    args = shlex.split(cmd)
+    p = subprocess.Popen(args, stdout=subprocess.PIPE)
+    out,err = p.communicate()
+    logging.warn("%s : %s" % (out,err))
+
+    cmd = "tc class add dev %s parent 1:15 classid 1:14 htb rate 512kbit ceil 512kbit" % RATE_LIM_IFACE
+    args = shlex.split(cmd)
+    p = subprocess.Popen(args, stdout=subprocess.PIPE)
+    out,err = p.communicate()
+    logging.warn("%s : %s" % (out,err))
+
+def setup_rate(rate):
+    cmd = "tc class change dev %s parent 1:15 classid 1:14 htb rate %dkbit ceil %dkbit" % (RATE_LIM_IFACE, rate, rate)
+    args = shlex.split(cmd)
+    p = subprocess.Popen(args, stdout=subprocess.PIPE)
+    out,err = p.communicate()
+
+    logging.warn("%s : %s" % (out,err))
 
 def send_ploss_report(p_loss):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -79,6 +103,7 @@ class IfListener(threading.Thread):
             logging.info("Quitting Listener Thread...")
             
     def sender_handle_packet(self, timestamp, pkt):
+        global rtt_avg
         tcp_hdr = dpkt.ethernet.Ethernet(pkt).data.data
         if tcp_hdr.flags & dpkt.tcp.TH_ACK and tcp_hdr.dport == PORT:
             try:
@@ -87,7 +112,8 @@ class IfListener(threading.Thread):
                 rtt = timestamp - _sent
                 rtts.append(rtt)
                 self.rtt_avg = get_avg_rtt(self.rtt_avg, rtt)
-                logging.info("Current RTT average : %f" % self.rtt_avg)
+                # logging.info("Current RTT average : %f" % self.rtt_avg)
+                rtt_avg = self.rtt_avg
                 # print "Received ack %d at %f" % (tcp_hdr.ack, timestamp)
             except KeyError:
                 pass
@@ -119,8 +145,12 @@ class IfListener(threading.Thread):
             
 class FeedbackHandler(SocketServer.BaseRequestHandler):
     def handle(self):
-        data = self.recv()
-        logging.info("Received p-loss report %s" % data)
+        global rtt_avg
+        data = self.request[0].strip()
+        throughput = (math.sqrt(1.5)*1024*8)/(math.sqrt(float(data))*rtt_avg*1000)
+        logging.info("Received p-loss report %s (RTT : %f)" % (data, rtt_avg))
+        logging.info("Estimated throughput is %f" % throughput)
+        setup_rate(int(throughput))
                      
 class FeedbackServer(SocketServer.ThreadingUDPServer):
     def __init__(self, host='localhost', port=None, handler=FeedbackHandler):
@@ -137,12 +167,14 @@ if __name__ == "__main__":
                       help="Script running on the receiver side (calculate p_loss instead of RTT")
 
     (options, args) = parser.parse_args()
+
+    setup_local_qdisc()
     
     listener = IfListener(DEFAULT_IFACE, options.is_receiver)
     listener.start()
 
     if(not options.is_receiver): 
-        feedback_rcver = FeedbackServer()
+        feedback_rcver = FeedbackServer(host='0.0.0.0')
         thr_feedback = threading.Thread(target=feedback_rcver.serve_forever)
         thr_feedback.daemon = True
         logging.info("Starting Feedback Server Thread")
