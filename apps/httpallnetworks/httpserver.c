@@ -1,9 +1,13 @@
 #include <fcntl.h>
 #include <unistd.h>
+#include <arpa/inet.h>
+#include <stdio.h>
+#include <sys/socket.h>
 
 #include "lwip/opt.h"
 #include "lwip/arch.h"
 #include "lwip/api.h"
+#include "lwip/tcp.h"
 
 #include "httpserver.h"
 
@@ -18,6 +22,7 @@ const static char http_index_html[] = "<html><head><title>Congrats!</title></hea
 
 #define BUFSIZE 8096
 
+#define ASE_PORT 9092
 
 /** Serve one HTTP connection accepted in the http thread */
 static void
@@ -30,6 +35,11 @@ http_server_netconn_serve(struct netconn *conn)
   char buffer[BUFSIZE + 1];
   int ret, bytes_sent;
   int file_fd = -1;
+  int ase_sock = -1;
+  int x;
+
+  struct sockaddr_in ase_addr;
+  char ase_buffer[BUFSIZE + 1];
   
   /* Read the data from the port, blocking if nothing yet there. 
    We assume the request (the part we care about) is in one netbuf */
@@ -53,13 +63,47 @@ http_server_netconn_serve(struct netconn *conn)
       }
       (void)sprintf(buffer,"HTTP/1.0 200 OK\r\nContent-Type: image/jpg\r\n\r\n");
       netconn_write(conn, buffer, strlen(buffer), NETCONN_COPY);
-      
-      while ((ret = read(file_fd, buffer, BUFSIZE)) > 0) {
-	netconn_write_partly(conn, buffer, ret, NETCONN_COPY, &bytes_sent);
+
+      /* open a hook so that this TCP connection can receive hints 
+	 to enable/disable congestion control */
+      ase_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+      x=fcntl(ase_sock, F_GETFL,0);
+      fcntl(ase_sock, F_SETFL, x | O_NONBLOCK);
+      ase_addr.sin_family = AF_INET;
+      ase_addr.sin_port = htons(ASE_PORT);
+      ase_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+      if (bind(ase_sock,&ase_addr,sizeof(ase_addr)) == -1){
+	printf("error cannot bind ase server...\n");
+	exit(1);
+      }
+
+      while(1){
+	/* get data from file and send it to the client */
+	ret = read(file_fd, buffer, BUFSIZE);
+	if (ret > 0){
+	  netconn_write_partly(conn, buffer, ret, NETCONN_COPY, &bytes_sent);
+	}	  
+	else{
+	  break;
+	}
+	/* check if there is no command for ASE */
+	ret = recv(ase_sock,ase_buffer, BUFSIZE,0);
+	if (ret > 0){
+	  if (tcp_congestion_control_enabled(conn->pcb.tcp)){
+	    printf("Disabling congestion control\n");
+	    tcp_congestion_control_disable(conn->pcb.tcp);
+	  }
+	  else{
+	    printf("Enabling congestion control\n");
+	    tcp_congestion_control_enable(conn->pcb.tcp);
+	  }
+	}
+
       }
 
       printf("done with file (code : %d)\n", ret);
       close(file_fd);
+      close(ase_sock);
       
     }
   }
