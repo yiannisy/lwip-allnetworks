@@ -32,6 +32,8 @@
 #ifndef __LWIPOPTS_H__
 #define __LWIPOPTS_H__
 
+#define LWIP_HERCULES 0
+
 /* <sys/time.h> is included in cc.h! */
 #define LWIP_TIMEVAL_PRIVATE 0
 
