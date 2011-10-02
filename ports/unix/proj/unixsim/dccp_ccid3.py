@@ -8,7 +8,9 @@ import threading
 import SocketServer
 import math
 import shlex, subprocess
+import socket
 from optparse import OptionParser
+
 
 RATE_LIM_IFACE='eth0'
 DEFAULT_IFACE='eth0'
@@ -33,7 +35,7 @@ def setup_local_qdisc():
     out,err = p.communicate()
     logging.warn("%s : %s" % (out,err))
 
-    cmd = "tc class add dev %s parent 1:15 classid 1:14 htb rate 512kbit ceil 512kbit" % RATE_LIM_IFACE
+    cmd = "tc class add dev %s parent 1:15 classid 1:14 htb rate 1024kbit ceil 1024kbit" % RATE_LIM_IFACE
     args = shlex.split(cmd)
     p = subprocess.Popen(args, stdout=subprocess.PIPE)
     out,err = p.communicate()
@@ -46,6 +48,11 @@ def setup_rate(rate):
     out,err = p.communicate()
 
     logging.warn("%s : %s" % (out,err))
+
+def _set_congestion(value):
+    logging.info("Setting Congestion to %d" % value)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.sendto(str(value), ('localhost',9092))
 
 def send_ploss_report(p_loss):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -144,13 +151,27 @@ class IfListener(threading.Thread):
             
             
 class FeedbackHandler(SocketServer.BaseRequestHandler):
+    dccp_active = False
+
+    @staticmethod
+    def enable_dccp():
+        dccp_active = True
+
+    @staticmethod
+    def disable_dccp():
+        dccp_active = False
+
     def handle(self):
         global rtt_avg
         data = self.request[0].strip()
         throughput = (math.sqrt(1.5)*1024*8)/(math.sqrt(float(data))*rtt_avg*1000)
         logging.info("Received p-loss report %s (RTT : %f)" % (data, rtt_avg))
         logging.info("Estimated throughput is %f" % throughput)
-        setup_rate(int(throughput))
+        if(self.dccp_active):
+            logging.info("Setting Rate at Switch")
+            setup_rate(int(throughput))
+        else:
+            logging.info("Rate not sent since dccp is not active")
                      
 class FeedbackServer(SocketServer.ThreadingUDPServer):
     def __init__(self, host='localhost', port=None, handler=FeedbackHandler):
@@ -179,4 +200,18 @@ if __name__ == "__main__":
         thr_feedback.daemon = True
         logging.info("Starting Feedback Server Thread")
         thr_feedback.start()
-    
+
+        time.sleep(300)
+        logging.info("Disable congestion and enable DCCP")
+        _set_congestion(0)
+        FeedbackHandler.enable_dccp()
+        time.sleep(300)
+        FeedbackHandler.disable_dccp()
+        logging.info("Setting User Specified Rate")
+        setup_rate(256)
+
+#        while(True):
+#            time.sleep(10)
+#            _set_congestion(1)
+#            time.sleep(10)
+#            _set_congestion(0)
